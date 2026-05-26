@@ -1,3 +1,5 @@
-# dev-lizard.io
+# dev-lizard.io mappy page
 
-Testing
+Git-Hub hosted page dedicated to hosting my maps & visualizations.
+
+https://dev-lizard.github.io/
