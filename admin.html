@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin · Maeve Clarke</title>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@300..800&display=swap" rel="stylesheet">
+<style>
+	:root { --ink:#1a1a1a; --muted:#6b6b6b; --line:#ddd; --accent:#0b6e99; --warn:#b3261e; --ok:#1e7a3c; }
+	* { box-sizing: border-box; }
+	body { margin:0; font-family:"Overpass",system-ui,sans-serif; color:var(--ink); background:#f6f6f4; font-size:15px; }
+	header { background:#fff; border-bottom:1px solid var(--line); padding:16px 24px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; position:sticky; top:0; z-index:10; }
+	header h1 { font-size:1.2rem; margin:0; margin-right:auto; }
+	header a { color:var(--muted); }
+	main { max-width:1000px; margin:0 auto; padding:24px; }
+	.panel { background:#fff; border:1px solid var(--line); padding:20px; margin-bottom:20px; }
+	.panel h2 { margin:0 0 12px; font-size:1.05rem; }
+	label { display:block; font-size:.8rem; font-weight:600; color:var(--muted); margin-bottom:3px; }
+	input[type=text], input[type=password], input[type=url], select, textarea {
+		width:100%; font:inherit; padding:7px 9px; border:1px solid #ccc; background:#fff; border-radius:3px;
+	}
+	textarea { min-height:160px; font-family: ui-monospace, Menlo, monospace; font-size:.85rem; }
+	.row { display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); margin-bottom:10px; }
+	button { font:inherit; cursor:pointer; border:1px solid #bbb; background:#fff; padding:7px 14px; border-radius:3px; }
+	button:hover { border-color:var(--ink); }
+	button.primary { background:var(--ink); color:#fff; border-color:var(--ink); font-weight:600; }
+	button.primary:hover { background:var(--accent); border-color:var(--accent); }
+	button.danger { color:var(--warn); }
+	button:disabled { opacity:.45; cursor:default; }
+	.hint { color:var(--muted); font-size:.85rem; }
+	.hint a { color:var(--accent); }
+	.tabs { display:flex; gap:4px; margin-bottom:-1px; }
+	.tabs button { border-radius:3px 3px 0 0; border-bottom-color:var(--line); background:#eee; }
+	.tabs button[aria-selected=true] { background:#fff; border-bottom-color:#fff; font-weight:700; }
+	.drop { border:2px dashed #bbb; padding:26px; text-align:center; color:var(--muted); cursor:pointer; background:#fafafa; margin-bottom:12px; }
+	.drop.over { border-color:var(--accent); background:#eef6fa; color:var(--accent); }
+	.list { display:flex; flex-direction:column; gap:10px; }
+	.card { display:grid; grid-template-columns:28px 120px 1fr auto; gap:14px; background:#fff; border:1px solid var(--line); padding:12px; align-items:start; }
+	.card.dragging { opacity:.4; }
+	.card.drop-before { box-shadow: 0 -3px 0 var(--accent); }
+	.card.drop-after { box-shadow: 0 3px 0 var(--accent); }
+	.card.is-hidden .thumb { opacity:.35; }
+	.handle { cursor:grab; color:#999; font-size:1.3rem; user-select:none; text-align:center; padding-top:30px; }
+	.thumb { width:120px; height:120px; background:#eee center/cover no-repeat; display:flex; align-items:center; justify-content:center; color:#999; font-size:.75rem; text-align:center; position:relative; }
+	.thumb .new { position:absolute; top:4px; left:4px; background:var(--accent); color:#fff; font-size:.65rem; padding:1px 6px; border-radius:99px; font-weight:700; }
+	.side { display:flex; flex-direction:column; gap:6px; }
+	.side button { padding:4px 10px; }
+	.check { display:flex; align-items:center; gap:6px; font-size:.85rem; margin-top:4px; }
+	.check input { width:auto; }
+	.savebar { position:sticky; bottom:0; background:#fff; border-top:1px solid var(--line); padding:12px 24px; display:flex; gap:14px; align-items:center; }
+	.savebar .status { margin-right:auto; }
+	.dirty { color:var(--warn); font-weight:600; }
+	.ok { color:var(--ok); font-weight:600; }
+	.log { font-family: ui-monospace, Menlo, monospace; font-size:.78rem; color:var(--muted); max-height:120px; overflow:auto; white-space:pre-wrap; }
+	.hidden { display:none !important; }
+	.preview { border:1px solid var(--line); padding:10px 14px; min-height:160px; background:#fcfcfc; }
+	.preview img { max-width:100%; }
+	@media (max-width:640px) { .card { grid-template-columns:1fr; } .handle { display:none; } }
+</style>
+</head>
+<body>
+
+<header>
+	<h1>Portfolio admin</h1>
+	<span id="who" class="hint"></span>
+	<a href="index.html" target="_blank">View site ↗</a>
+</header>
+
+<main>
+	<!-- ===== connect ===== -->
+	<section class="panel" id="connect">
+		<h2>Connect to GitHub</h2>
+		<p class="hint">
+			Changes are saved straight to your site's repository, so this page needs a GitHub token.
+			Create a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a>:
+			under <b>Repository access</b> choose <i>Only select repositories</i> → your site repo, then under
+			<b>Permissions → Repository permissions</b> set <i>Contents</i> to <i>Read and write</i>. Nothing else is needed.
+		</p>
+		<div class="row">
+			<div><label for="owner">GitHub user</label><input id="owner" type="text" value="dev-lizard"></div>
+			<div><label for="repo">Repository</label><input id="repo" type="text" value="dev-lizard.github.io"></div>
+		</div>
+		<div class="row">
+			<div><label for="token">Token</label><input id="token" type="password" autocomplete="off" placeholder="github_pat_…"></div>
+		</div>
+		<label class="check"><input id="remember" type="checkbox"> Remember the token on this browser (only on your own computer)</label>
+		<p><button class="primary" id="connectBtn">Connect</button> <span id="connectMsg" class="hint"></span></p>
+	</section>
+
+	<!-- ===== editor ===== -->
+	<section id="editor" class="hidden">
+		<div class="tabs" role="tablist">
+			<button role="tab" data-kind="maps" aria-selected="true">Maps</button>
+			<button role="tab" data-kind="projects" aria-selected="false">Projects</button>
+		</div>
+		<div class="panel">
+			<div class="drop" id="drop" tabindex="0">
+				<b>Drop images here</b> or click to choose. Each image becomes a new item.
+				<input id="file" type="file" accept="image/*" multiple class="hidden">
+			</div>
+			<p style="margin-top:0"><button id="addBlank">+ Add without an image</button>
+			<span class="hint">Drag ☰ to reorder. Hidden items stay saved but don't show on the site.</span></p>
+			<div class="list" id="list"></div>
+		</div>
+	</section>
+</main>
+
+<div class="savebar hidden" id="savebar">
+	<span class="status" id="status"></span>
+	<button id="logout">Disconnect</button>
+	<button class="primary" id="saveBtn" disabled>Save to site</button>
+</div>
+<div class="log hidden" id="log" style="padding:0 24px 12px"></div>
+
+<template id="tpl-map">
+	<div class="card" draggable="false">
+		<div class="handle" title="Drag to reorder" draggable="true">☰</div>
+		<div class="thumb"></div>
+		<div>
+			<div class="row">
+				<div><label>Title</label><input data-f="title" type="text"></div>
+				<div><label>Type</label><select data-f="type"><option value="static">Static map</option><option value="interactive">Interactive map</option></select></div>
+				<div><label>Year</label><input data-f="year" type="text" placeholder="2026"></div>
+			</div>
+			<div class="row">
+				<div><label>Link <span class="hint">(interactive maps open this)</span></label><input data-f="link" type="url" placeholder="https://…"></div>
+			</div>
+			<div class="row">
+				<div><label>Caption</label><input data-f="caption" type="text" placeholder="Shown under the map when opened"></div>
+			</div>
+			<label class="check"><input data-f="hidden" type="checkbox"> Hidden</label>
+		</div>
+		<div class="side">
+			<button data-a="up" title="Move up">↑</button>
+			<button data-a="down" title="Move down">↓</button>
+			<button data-a="image">Image…</button>
+			<button data-a="delete" class="danger">Delete</button>
+		</div>
+	</div>
+</template>
+
+<template id="tpl-project">
+	<div class="card" draggable="false">
+		<div class="handle" title="Drag to reorder" draggable="true">☰</div>
+		<div class="thumb"></div>
+		<div>
+			<div class="row">
+				<div><label>Title</label><input data-f="title" type="text"></div>
+			</div>
+			<div class="row">
+				<div><label>Summary <span class="hint">(one or two sentences for the list)</span></label><input data-f="summary" type="text"></div>
+			</div>
+			<div class="row">
+				<div><label>Link</label><input data-f="link" type="url" placeholder="https://… (live tool, repo, PDF)"></div>
+				<div><label>Button text</label><input data-f="linkLabel" type="text" placeholder="View project ↗"></div>
+			</div>
+			<label>Write-up <span class="hint">(Markdown: ## heading, **bold**, - list, [link](url), ![image](url))</span>
+				<button type="button" data-a="preview" style="float:right;padding:1px 8px;font-size:.75rem">Preview</button></label>
+			<textarea data-f="body"></textarea>
+			<div class="preview hidden"></div>
+			<label class="check"><input data-f="hidden" type="checkbox"> Hidden</label>
+		</div>
+		<div class="side">
+			<button data-a="up" title="Move up">↑</button>
+			<button data-a="down" title="Move down">↓</button>
+			<button data-a="image">Image…</button>
+			<button data-a="delete" class="danger">Delete</button>
+		</div>
+	</div>
+</template>
+
+<script src="site.js"></script>
+<script>
+(() => {
+	const $ = (s) => document.querySelector(s);
+	const API = "https://api.github.com";
+	const THUMB_MAX = 800;          // px, longest side of grid thumbnails
+	const WARN_MB = 20, MAX_MB = 90; // GitHub's contents API tops out near 100 MB
+
+	const store = {
+		get(k) { try { return localStorage.getItem(k) ?? sessionStorage.getItem(k); } catch { return null; } },
+		set(k, v, persist) { try { (persist ? localStorage : sessionStorage).setItem(k, v); } catch {} },
+		clear(k) { try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch {} },
+	};
+
+	const S = {
+		owner: "", repo: "", branch: "main", token: "",
+		kind: "maps",
+		data: { maps: [], projects: [] },
+		sha: { maps: null, projects: null },
+		dirty: { maps: false, projects: false },
+		uploads: new Map(),   // item uid -> { file, thumb, ext }
+		deletes: new Set(),   // repo paths to remove on save
+		previews: new Map(),  // item uid -> object URL
+	};
+	let uidSeq = 0;
+	const uid = (item) => (item._uid ??= ++uidSeq);
+
+	// ---------- GitHub helpers ----------
+
+	async function gh(path, opts = {}) {
+		const res = await fetch(`${API}${path}`, {
+			...opts,
+			headers: {
+				Accept: "application/vnd.github+json",
+				Authorization: `Bearer ${S.token}`,
+				"X-GitHub-Api-Version": "2022-11-28",
+				...(opts.body ? { "Content-Type": "application/json" } : {}),
+			},
+		});
+		if (!res.ok) {
+			let msg = `${res.status}`;
+			try { msg += ` ${(await res.json()).message}`; } catch {}
+			const err = new Error(`GitHub: ${msg}`); err.status = res.status; throw err;
+		}
+		return res.status === 204 ? null : res.json();
+	}
+	const contents = (p) => `/repos/${S.owner}/${S.repo}/contents/${p.split("/").map(encodeURIComponent).join("/")}`;
+
+	const b64ToText = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\n/g, "")), (c) => c.charCodeAt(0)));
+	function textToB64(text) {
+		const bytes = new TextEncoder().encode(text);
+		let bin = ""; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+		return btoa(bin);
+	}
+	const blobToB64 = (blob) => new Promise((ok, fail) => {
+		const r = new FileReader();
+		r.onload = () => ok(String(r.result).split(",")[1]);
+		r.onerror = () => fail(r.error);
+		r.readAsDataURL(blob);
+	});
+
+	async function readJSON(path) {
+		try {
+			const f = await gh(`${contents(path)}?ref=${encodeURIComponent(S.branch)}`);
+			return { data: JSON.parse(b64ToText(f.content)), sha: f.sha };
+		} catch (e) {
+			if (e.status === 404) return { data: [], sha: null };
+			throw e;
+		}
+	}
+	async function getSha(path) {
+		try { return (await gh(`${contents(path)}?ref=${encodeURIComponent(S.branch)}`)).sha; }
+		catch (e) { if (e.status === 404) return null; throw e; }
+	}
+	async function putFile(path, b64, message, sha) {
+		return gh(contents(path), { method: "PUT", body: JSON.stringify({ message, content: b64, branch: S.branch, ...(sha ? { sha } : {}) }) });
+	}
+	async function deleteFile(path, message) {
+		const sha = await getSha(path);
+		if (!sha) return; // already gone
+		await gh(contents(path), { method: "DELETE", body: JSON.stringify({ message, sha, branch: S.branch }) });
+	}
+
+	// ---------- connect ----------
+
+	async function connect() {
+		S.owner = $("#owner").value.trim();
+		S.repo = $("#repo").value.trim();
+		S.token = $("#token").value.trim();
+		const msg = $("#connectMsg");
+		if (!S.owner || !S.repo || !S.token) { msg.textContent = "Fill in all three fields."; return; }
+		msg.textContent = "Connecting…";
+		$("#connectBtn").disabled = true;
+		try {
+			const repo = await gh(`/repos/${S.owner}/${S.repo}`);
+			if (repo.permissions && !repo.permissions.push) throw new Error("This token can read the repo but not write to it. Set Contents to Read and write.");
+			S.branch = repo.default_branch || "main";
+			const [maps, projects] = await Promise.all([readJSON("data/maps.json"), readJSON("data/projects.json")]);
+			S.data.maps = Array.isArray(maps.data) ? maps.data : [];
+			S.data.projects = Array.isArray(projects.data) ? projects.data : [];
+			S.sha.maps = maps.sha; S.sha.projects = projects.sha;
+			const persist = $("#remember").checked;
+			store.clear("pf-token");
+			store.set("pf-token", S.token, persist);
+			store.set("pf-repo", `${S.owner}/${S.repo}`, true);
+			$("#connect").classList.add("hidden");
+			$("#editor").classList.remove("hidden");
+			$("#savebar").classList.remove("hidden");
+			$("#who").textContent = `${S.owner}/${S.repo} · ${S.branch}`;
+			render(); updateStatus();
+		} catch (e) {
+			msg.textContent = e.status === 401 ? "That token wasn't accepted. Check it was copied in full and hasn't expired."
+				: e.status === 404 ? "Repository not found, or the token can't see it. Check the name and the token's repository access."
+				: e.message;
+		} finally { $("#connectBtn").disabled = false; }
+	}
+
+	// ---------- images ----------
+
+	async function makeThumb(file) {
+		const bmp = await createImageBitmap(file);
+		const scale = Math.min(1, THUMB_MAX / Math.max(bmp.width, bmp.height));
+		const c = document.createElement("canvas");
+		c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+		const ctx = c.getContext("2d");
+		ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height); // flatten transparency for JPEG
+		ctx.drawImage(bmp, 0, 0, c.width, c.height);
+		bmp.close?.();
+		return new Promise((ok) => c.toBlob(ok, "image/jpeg", 0.86));
+	}
+
+	const slug = (s) => String(s || "item").toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/[\s_]+/g, "-").replace(/-+/g, "-").slice(0, 50) || "item";
+	const titleFromFile = (name) => name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim().replace(/^./, (c) => c.toUpperCase());
+
+	async function attachImage(item, file) {
+		const mb = file.size / 1048576;
+		if (mb > MAX_MB) { alert(`${file.name} is ${mb.toFixed(0)} MB. GitHub can't take files this big through this page; export a smaller version (under ${MAX_MB} MB).`); return false; }
+		if (mb > WARN_MB && !confirm(`${file.name} is ${mb.toFixed(0)} MB. Large images load slowly when opened full size. Upload anyway?`)) return false;
+		let thumb;
+		try { thumb = await makeThumb(file); }
+		catch { alert(`${file.name} couldn't be read as an image.`); return false; }
+		// a replaced, already-saved image gets removed on save
+		if (!S.uploads.has(uid(item))) { if (item.image) S.deletes.add(item.image); if (item.thumb) S.deletes.add(item.thumb); }
+		const ext = (file.name.match(/\.([a-z0-9]+)$/i)?.[1] || "png").toLowerCase();
+		S.uploads.set(uid(item), { file, thumb, ext });
+		const old = S.previews.get(uid(item)); if (old) URL.revokeObjectURL(old);
+		S.previews.set(uid(item), URL.createObjectURL(thumb));
+		return true;
+	}
+
+	async function addFiles(files) {
+		const list = S.data[S.kind];
+		for (const file of files) {
+			if (!file.type.startsWith("image/")) continue;
+			const item = S.kind === "maps"
+				? { title: titleFromFile(file.name), type: "static" }
+				: { id: `${slug(titleFromFile(file.name))}-${Date.now().toString(36)}`, title: titleFromFile(file.name), summary: "", body: "" };
+			if (await attachImage(item, file)) list.unshift(item);
+		}
+		markDirty(); render();
+	}
+
+	// ---------- render ----------
+
+	function render() {
+		document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.kind === S.kind));
+		const list = $("#list");
+		list.replaceChildren();
+		const items = S.data[S.kind];
+		if (!items.length) {
+			list.append(Object.assign(document.createElement("p"), { className: "hint", textContent: `No ${S.kind} yet. Drop an image above to add the first one.` }));
+			return;
+		}
+		const tpl = $(S.kind === "maps" ? "#tpl-map" : "#tpl-project");
+		items.forEach((item, i) => {
+			const card = tpl.content.firstElementChild.cloneNode(true);
+			card.dataset.index = i;
+			card.classList.toggle("is-hidden", !!item.hidden);
+
+			const thumb = card.querySelector(".thumb");
+			const src = S.previews.get(uid(item)) || item.thumb || item.image;
+			if (src) thumb.style.backgroundImage = `url("${String(src).replace(/"/g, "%22")}")`;
+			else thumb.textContent = "No image";
+			if (S.uploads.has(uid(item))) thumb.append(Object.assign(document.createElement("span"), { className: "new", textContent: "new" }));
+
+			card.querySelectorAll("[data-f]").forEach((input) => {
+				const f = input.dataset.f;
+				if (input.type === "checkbox") input.checked = !!item[f];
+				else input.value = item[f] ?? (f === "type" ? "static" : "");
+				input.addEventListener("input", () => {
+					if (input.type === "checkbox") item[f] = input.checked || undefined;
+					else item[f] = input.value || undefined;
+					if (f === "hidden") card.classList.toggle("is-hidden", input.checked);
+					markDirty();
+				});
+			});
+
+			card.querySelectorAll("[data-a]").forEach((btn) => btn.addEventListener("click", () => action(btn.dataset.a, i, card)));
+			wireDrag(card, i);
+			list.append(card);
+		});
+	}
+
+	function action(a, i, card) {
+		const items = S.data[S.kind];
+		const item = items[i];
+		if (a === "up" && i > 0) { [items[i - 1], items[i]] = [items[i], items[i - 1]]; markDirty(); render(); }
+		else if (a === "down" && i < items.length - 1) { [items[i + 1], items[i]] = [items[i], items[i + 1]]; markDirty(); render(); }
+		else if (a === "delete") {
+			if (!confirm(`Delete "${item.title || "Untitled"}"? Its image is removed from the site when you save.`)) return;
+			if (S.uploads.has(uid(item))) S.uploads.delete(uid(item));
+			else { if (item.image) S.deletes.add(item.image); if (item.thumb) S.deletes.add(item.thumb); }
+			items.splice(i, 1); markDirty(); render();
+		}
+		else if (a === "image") {
+			const input = Object.assign(document.createElement("input"), { type: "file", accept: "image/*" });
+			input.onchange = async () => { if (input.files[0] && await attachImage(item, input.files[0])) { markDirty(); render(); } };
+			input.click();
+		}
+		else if (a === "preview") {
+			const ta = card.querySelector("textarea"), pv = card.querySelector(".preview");
+			const showing = !pv.classList.contains("hidden");
+			if (!showing) pv.innerHTML = Site.markdown(ta.value) || '<p class="hint">Nothing written yet.</p>';
+			pv.classList.toggle("hidden", showing); ta.classList.toggle("hidden", !showing);
+			card.querySelector('[data-a="preview"]').textContent = showing ? "Preview" : "Edit";
+		}
+	}
+
+	// drag and drop reordering (the handle starts the drag; the whole card is a target)
+	let dragFrom = null;
+	function wireDrag(card, i) {
+		const handle = card.querySelector(".handle");
+		handle.addEventListener("dragstart", (e) => {
+			dragFrom = i; card.classList.add("dragging");
+			e.dataTransfer.effectAllowed = "move";
+			e.dataTransfer.setData("text/plain", String(i));
+			e.dataTransfer.setDragImage(card, 20, 20);
+		});
+		handle.addEventListener("dragend", () => { dragFrom = null; document.querySelectorAll(".card").forEach((c) => c.classList.remove("dragging", "drop-before", "drop-after")); });
+		card.addEventListener("dragover", (e) => {
+			if (dragFrom === null) return;
+			e.preventDefault();
+			const after = e.offsetY > card.offsetHeight / 2 || e.clientY > card.getBoundingClientRect().top + card.offsetHeight / 2;
+			card.classList.toggle("drop-after", after); card.classList.toggle("drop-before", !after);
+		});
+		card.addEventListener("dragleave", () => card.classList.remove("drop-before", "drop-after"));
+		card.addEventListener("drop", (e) => {
+			if (dragFrom === null) return;
+			e.preventDefault();
+			const after = card.classList.contains("drop-after");
+			const items = S.data[S.kind];
+			const [moved] = items.splice(dragFrom, 1);
+			let to = i + (after ? 1 : 0);
+			if (dragFrom < to) to -= 1;
+			items.splice(to, 0, moved);
+			dragFrom = null; markDirty(); render();
+		});
+	}
+
+	// ---------- save ----------
+
+	function markDirty() { S.dirty[S.kind] = true; updateStatus(); }
+	const anyDirty = () => S.dirty.maps || S.dirty.projects || S.uploads.size > 0 || S.deletes.size > 0;
+	function updateStatus(text, cls) {
+		const st = $("#status");
+		if (text) { st.textContent = text; st.className = `status ${cls || ""}`; }
+		else if (anyDirty()) { st.textContent = "Unsaved changes"; st.className = "status dirty"; }
+		else { st.textContent = "All changes saved"; st.className = "status hint"; }
+		$("#saveBtn").disabled = !anyDirty();
+	}
+	function log(line) { const l = $("#log"); l.classList.remove("hidden"); l.textContent += line + "\n"; l.scrollTop = l.scrollHeight; }
+
+	function itemFolder(kind) { return kind === "maps" ? "images/maps" : "images/projects"; }
+
+	async function save() {
+		$("#saveBtn").disabled = true; $("#log").textContent = "";
+		updateStatus("Saving…");
+		try {
+			// 1. upload new images (one at a time: parallel commits to one branch conflict)
+			for (const kind of ["maps", "projects"]) {
+				for (const item of S.data[kind]) {
+					const up = S.uploads.get(uid(item));
+					if (!up) continue;
+					const base = `${slug(item.title)}-${Date.now().toString(36)}`;
+					const image = `${itemFolder(kind)}/${base}.${up.ext}`;
+					const thumb = `${itemFolder(kind)}/thumbs/${base}.jpg`;
+					log(`Uploading ${image}…`);
+					await putFile(image, await blobToB64(up.file), `Add image: ${item.title || base}`);
+					log(`Uploading ${thumb}…`);
+					await putFile(thumb, await blobToB64(up.thumb), `Add thumbnail: ${item.title || base}`);
+					item.image = image; item.thumb = thumb;
+					S.uploads.delete(uid(item));
+					S.dirty[kind] = true;
+				}
+			}
+			// 2. write the lists; warn if someone changed them on GitHub since this page loaded
+			for (const kind of ["maps", "projects"]) {
+				if (!S.dirty[kind]) continue;
+				const path = `data/${kind}.json`;
+				const current = await getSha(path);
+				if (current !== S.sha[kind] && !confirm(`${path} was changed on GitHub after you opened this page. Overwrite those changes with what's here?`)) {
+					throw new Error(`Stopped: ${path} changed on GitHub. Reload this page to get the latest version.`);
+				}
+				const clean = S.data[kind].map(({ _uid, ...rest }) => Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined && v !== "")));
+				log(`Saving ${path}…`);
+				const res = await putFile(path, textToB64(JSON.stringify(clean, null, 2) + "\n"), `Update ${kind} from admin`, current);
+				S.sha[kind] = res.content.sha;
+				S.dirty[kind] = false;
+			}
+			// 3. remove images no longer used (after the lists, so the site never points at a missing file)
+			const inUse = new Set([...S.data.maps, ...S.data.projects].flatMap((x) => [x.image, x.thumb]).filter(Boolean));
+			for (const path of [...S.deletes]) {
+				if (!inUse.has(path) && /^images\//.test(path)) { log(`Removing ${path}…`); await deleteFile(path, `Remove image: ${path}`); }
+				S.deletes.delete(path);
+			}
+			log("Done. The live site updates in about a minute.");
+			updateStatus("Saved. The live site updates in about a minute.", "ok");
+			render();
+		} catch (e) {
+			log(e.message);
+			updateStatus(`Save failed: ${e.message}`, "dirty");
+		} finally { $("#saveBtn").disabled = !anyDirty(); }
+	}
+
+	// ---------- wire up ----------
+
+	$("#connectBtn").addEventListener("click", connect);
+	$("#token").addEventListener("keydown", (e) => { if (e.key === "Enter") connect(); });
+	document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { S.kind = b.dataset.kind; render(); }));
+	const drop = $("#drop"), file = $("#file");
+	drop.addEventListener("click", () => file.click());
+	drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); file.click(); } });
+	file.addEventListener("change", () => { addFiles([...file.files]); file.value = ""; });
+	drop.addEventListener("dragover", (e) => { if (dragFrom !== null) return; e.preventDefault(); drop.classList.add("over"); });
+	drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+	drop.addEventListener("drop", (e) => { if (dragFrom !== null) return; e.preventDefault(); drop.classList.remove("over"); addFiles([...e.dataTransfer.files]); });
+	$("#addBlank").addEventListener("click", () => {
+		const item = S.kind === "maps" ? { title: "New interactive map", type: "interactive" }
+			: { id: `project-${Date.now().toString(36)}`, title: "New project", summary: "", body: "" };
+		S.data[S.kind].unshift(item); markDirty(); render();
+	});
+	$("#saveBtn").addEventListener("click", save);
+	$("#logout").addEventListener("click", () => {
+		if (anyDirty() && !confirm("You have unsaved changes. Disconnect anyway?")) return;
+		store.clear("pf-token"); location.reload();
+	});
+	window.addEventListener("beforeunload", (e) => { if (anyDirty()) { e.preventDefault(); e.returnValue = ""; } });
+
+	const savedRepo = store.get("pf-repo");
+	if (savedRepo && savedRepo.includes("/")) { const [o, r] = savedRepo.split("/"); $("#owner").value = o; $("#repo").value = r; }
+	const savedToken = store.get("pf-token");
+	if (savedToken) {
+		let persisted = false; try { persisted = !!localStorage.getItem("pf-token"); } catch {}
+		$("#token").value = savedToken; $("#remember").checked = persisted; connect();
+	}
+})();
+</script>
+</body>
+</html>
